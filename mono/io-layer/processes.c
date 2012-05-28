@@ -30,6 +30,10 @@
 #include <sys/mkdev.h>
 #endif
 
+#ifdef __QNX__
+#define MAKEDEV(a,b) makedev(0,a,b)
+#endif
+
 /* sys/resource.h (for rusage) is required when using osx 10.3 (but not 10.4) */
 #ifdef __APPLE__
 #include <sys/resource.h>
@@ -1939,7 +1943,11 @@ static GSList *load_modules (void)
 		mod->address_end = GINT_TO_POINTER (sec->addr+sec->size);
 		mod->perms = g_strdup ("r--p");
 		mod->address_offset = 0;
+#ifdef __QNX__
+		mod->device = MAKEDEV (0, 0);
+#else
 		mod->device = makedev (0, 0);
+#endif
 		mod->inode = (ino_t) i;
 		mod->filename = g_strdup (name); 
 		
@@ -2135,8 +2143,11 @@ static GSList *load_modules (FILE *fp)
 		if (!g_ascii_isspace (*p)) {
 			continue;
 		}
-
+#ifdef __QNX__
+		device = MAKEDEV ((int)maj_dev, (int)min_dev);
+#else
 		device = makedev ((int)maj_dev, (int)min_dev);
+#endif
 		if ((device == 0) &&
 		    (inode == 0)) {
 			continue;

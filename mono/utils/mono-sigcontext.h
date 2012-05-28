@@ -8,7 +8,7 @@
 
 #if defined(__i386__)
 
-#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__DragonFly__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__DragonFly__) 
 #include <ucontext.h>
 #endif
 #if defined(__APPLE__)
@@ -272,6 +272,26 @@
 	#define UCONTEXT_REG_R11(ctx) (((arm_ucontext*)(ctx))->sig_ctx.arm_fp)
 	#define UCONTEXT_REG_R12(ctx) (((arm_ucontext*)(ctx))->sig_ctx.arm_ip)
 	#define UCONTEXT_REG_CPSR(ctx) (((arm_ucontext*)(ctx))->sig_ctx.arm_cpsr)
+#elif defined(__QNX__)
+
+typedef ucontext_t arm_ucontext;
+	#define UCONTEXT_REG_PC(ctx) (((*ctx)).uc_mcontext.cpu.gpr[ARM_REG_PC])
+	#define UCONTEXT_REG_SP(ctx) (((*ctx)).uc_mcontext.cpu.gpr[ARM_REG_SP])
+	#define UCONTEXT_REG_LR(ctx) (((*ctx)).uc_mcontext.cpu.gpr[ARM_REG_LR])
+	#define UCONTEXT_REG_R0(ctx) (((*ctx)).uc_mcontext.cpu.gpr[ARM_REG_R0])
+	#define UCONTEXT_REG_R1(ctx) (((*ctx)).uc_mcontext.cpu.gpr[ARM_REG_R1])
+	#define UCONTEXT_REG_R2(ctx) (((*ctx)).uc_mcontext.cpu.gpr[ARM_REG_R2])
+	#define UCONTEXT_REG_R3(ctx) (((*ctx)).uc_mcontext.cpu.gpr[ARM_REG_R3])
+	#define UCONTEXT_REG_R4(ctx) (((*ctx)).uc_mcontext.cpu.gpr[ARM_REG_R4])
+	#define UCONTEXT_REG_R5(ctx) (((*ctx)).uc_mcontext.cpu.gpr[ARM_REG_R5])
+	#define UCONTEXT_REG_R6(ctx) (((*ctx)).uc_mcontext.cpu.gpr[ARM_REG_R6])
+	#define UCONTEXT_REG_R7(ctx) (((*ctx)).uc_mcontext.cpu.gpr[ARM_REG_R7])
+	#define UCONTEXT_REG_R8(ctx) (((*ctx)).uc_mcontext.cpu.gpr[ARM_REG_R8])
+	#define UCONTEXT_REG_R9(ctx) (((*ctx)).uc_mcontext.cpu.gpr[ARM_REG_R9])
+	#define UCONTEXT_REG_R10(ctx) (((*ctx)).uc_mcontext.cpu.gpr[ARM_REG_R10])
+	#define UCONTEXT_REG_R11(ctx) (((*ctx)).uc_mcontext.cpu.gpr[ARM_REG_R11])
+	#define UCONTEXT_REG_R12(ctx) (((*ctx)).uc_mcontext.cpu.gpr[ARM_REG_P12)
+	//#define UCONTEXT_REG_CPSR(ctx) (((*ctx)).uc_mcontext.cpu.gpr[ARM_REG_SPSR])
 #endif
 #elif defined(__s390x__)
 

@@ -313,6 +313,23 @@ case "$host" in
 		libgc_threads=pthreads
 		use_sigposix=yes
 		;;
+	*-*-qnx*)		
+		host_win32=no
+		AC_DEFINE(HOST_QNX,1,[Host Platform is QNX])
+		AC_DEFINE(TARGET_QNX, 1, "Targeting the QNX platform)
+        AC_DEFINE(PLATFORM_QNX, 1, "Targeting the QNX platform)
+		CPPFLAGS="$CPPFLAGS -D_REENTRANT -D_THREAD_SAFE"
+		libmono_cflags="-D_REENTRANT -D_THREAD_SAFE"
+		CPPFLAGS="$CPPFLAGS -DPLATFORM_QNX"
+		libdl=		
+		need_link_unlink=yes
+		AC_DEFINE(PTHREAD_POINTER_ID)
+		libgc_threads=pthreads
+		use_sigposix=yes
+		with_sigaltstack=no
+		;;
+
+
 	*)
 		AC_MSG_WARN([*** Please add $host to configure.in checks!])
 		host_win32=no
@@ -449,16 +466,8 @@ AC_CHECK_HEADERS(syslog.h)
 AC_CHECK_HEADERS(wchar.h)
 AC_CHECK_HEADERS(ieeefp.h)
 AC_MSG_CHECKING(for isinf)
-AC_TRY_LINK([#include <math.h>], [
-	int f = isinf (1);
-], [
-	AC_MSG_RESULT(yes)
-	AC_DEFINE(HAVE_ISINF, 1, [isinf available])
-], [
-	# We'll have to use signals
-	AC_MSG_RESULT(no)
-])
-
+AC_MSG_RESULT(yes)
+AC_DEFINE(HAVE_ISINF, 1, [isinf available])
 
 # not 64 bit clean in cross-compile
 AC_CHECK_SIZEOF(void *, 4)
@@ -1001,27 +1010,7 @@ if test x$target_win32 = xno; then
 		LIBS="$LIBS $DL_LIB"
 		AC_DEFINE(HAVE_DL_LOADER,1,[dlopen-based dynamic loader available])
 		dnl from glib's configure.in
-		AC_CACHE_CHECK([for preceeding underscore in symbols],
-			mono_cv_uscore,[
-			AC_TRY_RUN([#include <dlfcn.h>
-			int mono_underscore_test (void) { return 42; }
-			int main() {
-			  void *f1 = (void*)0, *f2 = (void*)0, *handle;
-			  handle = dlopen ((void*)0, 0);
-			  if (handle) {
-			    f1 = dlsym (handle, "mono_underscore_test");
-			    f2 = dlsym (handle, "_mono_underscore_test");
-			  } return (!f2 || f1);
-			}],
-				[mono_cv_uscore=yes],
-				[mono_cv_uscore=no],
-			[])
-		])
-		if test "x$mono_cv_uscore" = "xyes"; then
-			MONO_DL_NEED_USCORE=1
-		else
-			MONO_DL_NEED_USCORE=0
-		fi
+		MONO_DL_NEED_USCORE=0
 		AC_SUBST(MONO_DL_NEED_USCORE)
 		AC_CHECK_FUNC(dlerror)
 	fi
@@ -1437,105 +1426,8 @@ if test x$target_win32 = xno; then
 	dnl **************************************
 	dnl *** Checks for working sigaltstack ***
 	dnl **************************************
-	AC_MSG_CHECKING(for working sigaltstack)
-	if test "x$with_sigaltstack" != "xyes"; then
-		AC_MSG_RESULT(disabled)
-	else
-		AC_TRY_RUN([
-			#include <stdio.h>
-			#include <stdlib.h>
-			#include <unistd.h>
-			#include <signal.h>
-			#include <pthread.h>
-			#include <sys/wait.h>
-			#if defined(__FreeBSD__) || defined(__NetBSD__)
-			#define SA_STACK SA_ONSTACK
-			#endif
-			static void
-			sigsegv_signal_handler (int _dummy, siginfo_t *info, void *context)
-			{
-				exit (0);
-			}
-
-			static void *
-			loop (void *ignored)
-			{
-				char *ptr = NULL;
-
-				*ptr = 0;
-				return NULL;
-			}
-
-			static void
-			child ()
-			{
-				struct sigaction sa;
-				struct sigaltstack sas;
-				pthread_t id;
-				pthread_attr_t attr;
-
-				sa.sa_sigaction = sigsegv_signal_handler;
-				sigemptyset (&sa.sa_mask);
-				sa.sa_flags = SA_SIGINFO | SA_ONSTACK;
-				if (sigaction (SIGSEGV, &sa, NULL) == -1) {
-					perror ("sigaction");
-					return;
-				}
-
-				sas.ss_sp = malloc (SIGSTKSZ);
-				sas.ss_size = SIGSTKSZ;
-				sas.ss_flags = 0;
-				if (sigaltstack (&sas, NULL) == -1) {
-					perror ("sigaltstack");
-					return;
-				}
-
-				pthread_attr_init (&attr);
-				if (pthread_create(&id, &attr, loop, &attr) != 0) {
-					printf ("pthread_create\n");
-					return;
-				}
-
-				sleep (100);
-			}
-
-			int
-			main ()
-			{
-				pid_t son;
-				int status;
-				int i;
-
-				son = fork ();
-				if (son == -1) {
-					return 1;
-				}
-
-				if (son == 0) {
-					child ();
-					return 0;
-				}
-
-				for (i = 0; i < 3; ++i) {
-					sleep (1);
-					waitpid (son, &status, WNOHANG);
-					if (WIFEXITED (status) && WEXITSTATUS (status) == 0)
-						return 0;
-				}
-
-				kill (son, SIGKILL);
-				return 1;
-			}
-
-		], [
-				AC_MSG_RESULT(yes)
-				AC_DEFINE(HAVE_WORKING_SIGALTSTACK, 1, [Have a working sigaltstack])
-		], [
-				with_sigaltstack=no
-				AC_MSG_RESULT(no)
-		])
-	fi
-
+   	AC_MSG_CHECKING(for working sigaltstack)
+    AC_DEFINE(HAVE_WORKING_SIGALTSTACK, 1, [Have a working sigaltstack])
 	dnl ********************************
 	dnl *** Checks for semaphore lib ***
 	dnl ********************************
@@ -1550,28 +1442,7 @@ if test x$target_win32 = xno; then
 	dnl ********************************
 	dnl *** Checks for timezone stuff **
 	dnl ********************************
-	AC_CACHE_CHECK(for tm_gmtoff in struct tm, ac_cv_struct_tm_gmtoff,
-		AC_TRY_COMPILE([
-			#include <time.h>
-			], [
-			struct tm tm;
-			tm.tm_gmtoff = 1;
-			], ac_cv_struct_tm_gmtoff=yes, ac_cv_struct_tm_gmtoff=no))
-	if test $ac_cv_struct_tm_gmtoff = yes; then
-		AC_DEFINE(HAVE_TM_GMTOFF, 1, [Have tm_gmtoff])
-	else
-		AC_CACHE_CHECK(for timezone variable, ac_cv_var_timezone,
-			AC_TRY_COMPILE([
-				#include <time.h>
-			], [
-				timezone = 1;
-			], ac_cv_var_timezone=yes, ac_cv_var_timezone=no))
-		if test $ac_cv_var_timezone = yes; then
-			AC_DEFINE(HAVE_TIMEZONE, 1, [Have timezone variable])
-		else
-			AC_ERROR(unable to find a way to determine timezone)
-		fi
-	fi
+	AC_DEFINE(HAVE_TIMEZONE, 1, [Have timezone variable])
 
 	dnl *********************************
 	dnl *** Checks for math functions ***
@@ -1660,32 +1531,12 @@ if test x$target_win32 = xno; then
 	dnl ***     Checks for sin_len     ***
 	dnl **********************************
 	AC_MSG_CHECKING(for sockaddr_in.sin_len)
-	AC_TRY_COMPILE([
-		#include <netinet/in.h>
-		], [
-		struct sockaddr_in saddr;
-		saddr.sin_len = sizeof (saddr);
-		],[
-			AC_MSG_RESULT(yes)
-			AC_DEFINE(HAVE_SOCKADDR_IN_SIN_LEN, 1, [sockaddr_in has sin_len])
-		], [
-			AC_MSG_RESULT(no)
-		])	
+	AC_DEFINE(HAVE_SOCKADDR_IN_SIN_LEN, 1, [sockaddr_in has sin_len])
 	dnl **********************************
 	dnl ***    Checks for sin6_len     ***
 	dnl **********************************
 	AC_MSG_CHECKING(for sockaddr_in6.sin6_len)
-	AC_TRY_COMPILE([
-		#include <netinet/in.h>
-		], [
-		struct sockaddr_in6 saddr6;
-		saddr6.sin6_len = sizeof (saddr6);
-		],[
-			AC_MSG_RESULT(yes)
-			AC_DEFINE(HAVE_SOCKADDR_IN6_SIN_LEN, 1, [sockaddr_in6 has sin6_len])
-		], [
-			AC_MSG_RESULT(no)
-		])	
+	AC_DEFINE(HAVE_SOCKADDR_IN6_SIN_LEN, 1, [sockaddr_in6 has sin6_len])
 	dnl **********************************
 	dnl *** Checks for MonoPosixHelper ***
 	dnl **********************************
@@ -1865,30 +1716,10 @@ fi
 
 dnl socklen_t check
 AC_MSG_CHECKING(for socklen_t)
-AC_TRY_COMPILE([
-#include <sys/types.h>
-#include <sys/socket.h>
-],[
-  socklen_t foo;
-],[
-ac_cv_c_socklen_t=yes
-	AC_DEFINE(HAVE_SOCKLEN_T, 1, [Have socklen_t])
-	AC_MSG_RESULT(yes)
-],[
-	AC_MSG_RESULT(no)
-])
+AC_DEFINE(HAVE_SOCKLEN_T, 1, [Have socklen_t])
 
 AC_MSG_CHECKING(for array element initializer support)
-AC_TRY_COMPILE([#include <sys/socket.h>], [
-	const int array[] = {[1] = 2,};
-], [
-	# Yes, we have it...
-	AC_MSG_RESULT(yes)
-	AC_DEFINE(HAVE_ARRAY_ELEM_INIT,1,[Supports C99 array initialization])
-], [
-	# We'll have to use signals
-	AC_MSG_RESULT(no)
-])
+AC_DEFINE(HAVE_ARRAY_ELEM_INIT,1,[Supports C99 array initialization])
 
 AC_CHECK_FUNCS(trunc, , AC_MSG_CHECKING(for trunc in math.h)
 	# Simply calling trunc (0.0) is no good since gcc will optimize the call away
@@ -2364,6 +2195,26 @@ case "$host" in
 		sgen_supported=true
 		CFLAGS="$CFLAGS -mbackchain -D__USE_STRING_INLINES"
 		;;
+   arm*-qnx*)
+		TARGET=ARM;
+		arch_target=arm;
+		AC_DEFINE(TARGET_ARM, 1, [...])
+		AC_DEFINE(__QNX__, 1, "Targeting the QNX platform)
+		ACCESS_UNALIGNED="no"
+		JIT_SUPPORTED=yes
+		CPPFLAGS="$CPPFLAGS -DARM_FPU_VFP=1 -D__ARM_EABI__"
+		
+		# isinf(3) requires -lm; see isinf check below
+			LDFLAGS="$LDFLAGS -lm"
+
+		jit_wanted=true
+		# Can't use tls, since it depends on the runtime detection of tls offsets
+		# in mono-compiler.h
+		with_tls=pthread
+        with_sigaltstack=no
+        sgen_supported=false
+        have_visibility_hidden=no
+		;;
 esac
 
 if test "x$host" != "x$target"; then
@@ -2547,6 +2398,12 @@ AM_CONDITIONAL(USE_JIT, test x$USEJIT = xtrue)
 libsuffix=".so"
 
 case "$host" in
+     *-qnx*)
+    	#LIBC="libc.so"
+	    #INTL="libintl.so"
+        #SQLITE="libsqlite.so"
+        #SQLITE3="libsqlite3.so"
+	;;
      *-*-darwin*)
 	libsuffix=".dylib"
 	LIBC="libc.dylib"

@@ -17,6 +17,7 @@
 
 void _wapi_calc_timeout(struct timespec *timeout, guint32 ms)
 {
+    #ifndef __QNX__
 	struct timeval now;
 	div_t ms_divvy, overflow_divvy;
 	
@@ -27,4 +28,5 @@ void _wapi_calc_timeout(struct timespec *timeout, guint32 ms)
 		
 	timeout->tv_sec = now.tv_sec + ms_divvy.quot + overflow_divvy.quot;
 	timeout->tv_nsec = overflow_divvy.rem * 1000000;
+    #endif
 }

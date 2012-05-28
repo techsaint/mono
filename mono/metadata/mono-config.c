@@ -41,6 +41,8 @@
 #define CONFIG_OS "hpux"
 #elif defined(__HAIKU__)
 #define CONFIG_OS "haiku"
+#elif defined(__QNX__)
+#define CONFIG_OS "qnx"
 #else
 #warning Unknown operating system
 #define CONFIG_OS "unknownOS"
